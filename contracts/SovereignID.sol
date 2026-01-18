@@ -54,4 +54,3 @@ contract SovereignID is ERC721, Ownable {
         emit ReputationUpdated(user, newScore);
     }
 }
-
