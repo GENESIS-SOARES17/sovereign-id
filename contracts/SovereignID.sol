@@ -31,12 +31,16 @@ contract SovereignID is ERC721, Ownable {
         emit IdentityMinted(msg.sender, tokenId);
     }
 
-    // Soulbound: block transfers
-    function _transfer(
-        address,
-        address,
-        uint256
-    ) internal pure override {
+    // 🔒 Soulbound enforcement
+    function _transfer(address, address, uint256) internal override {
+        revert("SovereignID is soulbound");
+    }
+
+    function approve(address, uint256) public pure override {
+        revert("SovereignID is soulbound");
+    }
+
+    function setApprovalForAll(address, bool) public pure override {
         revert("SovereignID is soulbound");
     }
 
@@ -50,4 +54,4 @@ contract SovereignID is ERC721, Ownable {
         emit ReputationUpdated(user, newScore);
     }
 }
-Add SovereignID soulbound contract
+
