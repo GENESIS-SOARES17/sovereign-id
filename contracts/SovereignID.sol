@@ -14,7 +14,7 @@ contract SovereignID is ERC721, Ownable {
     event IdentityMinted(address indexed user, uint256 tokenId);
     event ReputationUpdated(address indexed user, uint256 newScore);
 
-    constructor() ERC721("SovereignID", "SID") {}
+    constructor() ERC721("SovereignID", "SID") Ownable() {}
 
     function mint(bytes32 _identityHash) external {
         require(!hasId[msg.sender], "Identity already exists");
@@ -32,7 +32,7 @@ contract SovereignID is ERC721, Ownable {
     }
 
     // 🔒 Soulbound enforcement
-    function _transfer(address, address, uint256) internal override {
+    function _transfer(address, address, uint256) internal pure override {
         revert("SovereignID is soulbound");
     }
 
@@ -44,13 +44,4 @@ contract SovereignID is ERC721, Ownable {
         revert("SovereignID is soulbound");
     }
 
-    function hasSovereignId(address user) external view returns (bool) {
-        return hasId[user];
-    }
-
-    function updateReputation(address user, uint256 newScore) external onlyOwner {
-        require(hasId[user], "No Sovereign ID");
-        reputation[user] = newScore;
-        emit ReputationUpdated(user, newScore);
-    }
-}
+    function hasSovereignId(address user) external view retu
