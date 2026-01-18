@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title SovereignID
+ * @dev Implementation of a Soulbound Token (SBT) for decentralized identity and reputation.
+ * The token cannot be transferred once minted, linking it permanently to the owner's address.
+ */
+contract SovereignID is ERC721, Ownable {
+    uint256 private _nextTokenId;
+
+    // Custom Errors for Gas Efficiency
+    error IdentityAlreadyExists();
+    error NoSovereignID();
+    error TokenIsSoulbound();
+
+    mapping(address => bool) public hasId;
+    mapping(uint256 => bytes32) public identityHash;
+    mapping(address => uint256) public reputation;
+
+    event IdentityMinted(address indexed user, uint256 tokenId, bytes32 identityHash);
+    event ReputationUpdated(address indexed user, uint256 newScore);
+
+    constructor() ERC721("SovereignID", "SID") Ownable(msg.sender) {}
+
+    /**
+     * @notice Mints a unique Sovereign Identity token.
+     * @param _identityHash The cryptographic hash representing the user's identity data off-chain.
+     */
+    function mint(bytes32 _identityHash) external {
+        if (hasId[msg.sender]) revert IdentityAlreadyExists();
+
+        uint256 tokenId = ++_nextTokenId;
+        
+        hasId[msg.sender] = true;
+        identityHash[tokenId] = _identityHash;
+        reputation[msg.sender] = 1;
+
+        _safeMint(msg.sender, tokenId);
+
+        emit IdentityMinted(msg.sender, tokenId, _identityHash);
+    }
+
+    /**
+     * @dev Enforces Soulbound restriction by overriding the internal _update function.
+     * Reverts on any transfer attempt, allowing only minting and burning.
+     */
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+        address from = _ownerOf(tokenId);
+        
+        // If 'from' is not address(0), it's a transfer attempt (not a mint)
+        // If 'to' is not address(0), it's not a burn
+        if (from != address(0) && to != address(0)) {
+            revert TokenIsSoulbound();
+        }
+        
+        return super._update(to, tokenId, auth);
+    }
+
+    /**
+     * @notice Updates the reputation score for a specific identity holder.
+     * @dev Restricted to the contract owner (governance/authority).
+     */
+    function updateReputation(address user, uint256 newScore) external onlyOwner {
+        if (!hasId[user]) revert NoSovereignID();
+        
+        reputation[user] = newScore;
+        emit ReputationUpdated(user, newScore);
+    }
+
+    /**
+     * @notice Checks if an address holds a Sovereign ID.
+     */
+    function hasSovereignId(address user) external view returns (bool) {
+        return hasId[user];
+    }
+
+    // Overriding approval functions to strictly prevent any marketplace interaction
+    function approve(address, uint256) public pure override {
+        revert TokenIsSoulbound();
+    }
+
+    function setApprovalForAll(address, bool) public pure override {
+        revert TokenIsSoulbound();
+    }
+}
