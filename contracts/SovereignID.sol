@@ -44,4 +44,13 @@ contract SovereignID is ERC721, Ownable {
         revert("SovereignID is soulbound");
     }
 
-    function hasSovereignId(address user) external view retu
+    function hasSovereignId(address user) external view returns (bool) {
+        return hasId[user];
+    }
+
+    function updateReputation(address user, uint256 newScore) external onlyOwner {
+        require(hasId[user], "No Sovereign ID");
+        reputation[user] = newScore;
+        emit ReputationUpdated(user, newScore);
+    }
+}
