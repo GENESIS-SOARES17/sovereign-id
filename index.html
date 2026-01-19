@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -20,53 +21,59 @@
         .card { 
             background: #1e293b; 
             padding: 2.5rem; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
             text-align: center; 
             max-width: 450px;
             width: 90%;
             border: 1px solid #334155;
         }
-        h1 { color: #818cf8; margin-bottom: 0.5rem; }
-        p { color: #94a3b8; font-size: 0.9rem; }
+        h1 { color: #818cf8; margin-bottom: 0.5rem; font-size: 1.8rem; }
+        p { color: #94a3b8; font-size: 0.95rem; margin-bottom: 2rem; }
         button { 
             background-color: #4f46e5; 
             color: white; 
             border: none; 
-            padding: 12px 24px; 
-            border-radius: 8px; 
+            padding: 14px 24px; 
+            border-radius: 10px; 
             cursor: pointer; 
             font-weight: bold;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
             width: 100%;
             margin-top: 15px;
+            font-size: 1rem;
         }
-        button:hover { background-color: #4338ca; }
-        button:disabled { background-color: #334155; cursor: not-allowed; }
+        button:hover { background-color: #4338ca; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        button:disabled { background-color: #334155; cursor: not-allowed; transform: none; }
         input { 
-            padding: 12px; 
+            padding: 14px; 
             width: 100%; 
             margin-top: 20px; 
             border: 1px solid #334155; 
-            border-radius: 8px; 
+            border-radius: 10px; 
             background: #0f172a;
             color: white;
             box-sizing: border-box;
+            outline: none;
         }
+        input:focus { border-color: #818cf8; }
         #status { 
-            margin-top: 20px; 
-            font-size: 0.85rem; 
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 25px; 
+            font-size: 0.9rem; 
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
         }
-        .success { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
-        .error { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+        .success { display: block !important; color: #4ade80; background: rgba(74, 222, 128, 0.1); border: 1px solid #4ade80; }
+        .error { display: block !important; color: #f87171; background: rgba(248, 113, 113, 0.1); border: 1px solid #f87171; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>🆔 SovereignID</h1>
+        <div style="font-size: 3rem; margin-bottom: 10px;">🆔</div>
+        <h1>SovereignID</h1>
         <p>Identidade Soulbound na Rede Neura</p>
         
         <button id="connectBtn">Conectar Carteira MetaMask</button>
@@ -83,65 +90,73 @@
         let signer;
         let contract;
         
-        // ENDEREÇO DO SEU CONTRATO QUE VOCÊ PASSOU
+        // ENDEREÇO ATUALIZADO DO SEU CONTRATO
         const contractAddress = "0x17D7338880AD6926D00C9f482A10049395C0C1b2";
         
-        // ABI simplificada para as funções que vamos usar
+        // ABI do Contrato
         const abi = [
             "function mint(bytes32 _identityHash) external",
-            "function hasSovereignId(address user) external view returns (bool)",
-            "function reputation(address user) external view returns (uint256)"
+            "function hasSovereignId(address user) external view returns (bool)"
         ];
 
         const connectBtn = document.getElementById('connectBtn');
         const mintSection = document.getElementById('mintSection');
         const status = document.getElementById('status');
+        const mintBtn = document.getElementById('mintBtn');
 
-        // Função para conectar a carteira
-        connectBtn.onclick = async () => {
-            if (window.ethereum) {
+        // Função de Conexão Corrigida
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
                 try {
+                    // Solicita as contas ao usuário
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     const provider = new ethers.providers.Web3Provider(window.ethereum);
-                    await provider.send("eth_requestAccounts", []);
                     signer = provider.getSigner();
-                    const address = await signer.getAddress();
+                    const address = accounts[0];
                     
                     connectBtn.innerText = "Conectado: " + address.substring(0,6) + "..." + address.substring(38);
+                    connectBtn.style.backgroundColor = "#1e293b";
+                    connectBtn.style.border = "1px solid #4f46e5";
+                    
                     mintSection.style.display = "block";
-                    showStatus("Carteira conectada! Agora você pode mintar seu ID.", "success");
+                    showStatus("Sucesso: Carteira conectada!", "success");
                 } catch (err) {
-                    showStatus("Erro ao conectar carteira.", "error");
+                    console.error(err);
+                    showStatus("Erro: Falha ao conectar. Verifique a MetaMask.", "error");
                 }
             } else {
-                alert("MetaMask não encontrada. Por favor, instale a extensão.");
+                showStatus("Erro: MetaMask não instalada.", "error");
             }
-        };
+        }
 
-        // Função para chamar o Mint no contrato
-        document.getElementById('mintBtn').onclick = async () => {
-            const hash = document.getElementById('hashInput').value;
+        connectBtn.onclick = connectWallet;
+
+        // Função de Mint
+        mintBtn.onclick = async () => {
+            const hash = document.getElementById('hashInput').value.trim();
             
             if (!hash.startsWith("0x") || hash.length !== 66) {
-                showStatus("Erro: O hash deve começar com 0x e ter 66 caracteres.", "error");
+                showStatus("Erro: O hash deve ter 66 caracteres (incluindo 0x).", "error");
                 return;
             }
 
             try {
                 contract = new ethers.Contract(contractAddress, abi, signer);
-                showStatus("Aguardando confirmação na MetaMask...", "success");
+                showStatus("Processando... Confirme na sua MetaMask.", "success");
                 
                 const tx = await contract.mint(hash);
-                showStatus("Transação enviada! Aguardando blocos...", "success");
+                showStatus("Transação enviada! Aguardando confirmação...", "success");
                 
                 await tx.wait();
-                showStatus("🎉 Identidade Soulbound mintada com sucesso!", "success");
-                document.getElementById('mintBtn').disabled = true;
+                showStatus("🎉 Sucesso! Identidade Soulbound mintada.", "success");
+                mintBtn.disabled = true;
+                mintBtn.innerText = "ID JÁ MINTADO";
             } catch (err) {
                 console.error(err);
-                if (err.message.includes("IdentityAlreadyExists")) {
-                    showStatus("Erro: Esta carteira já possui um SovereignID.", "error");
+                if (err.data && err.data.message && err.data.message.includes("IdentityAlreadyExists")) {
+                    showStatus("Erro: Você já possui um SovereignID.", "error");
                 } else {
-                    showStatus("Erro na transação. Verifique seu saldo de teste.", "error");
+                    showStatus("Erro ao processar o Mint. Verifique o saldo.", "error");
                 }
             }
         };
@@ -149,6 +164,7 @@
         function showStatus(msg, type) {
             status.innerText = msg;
             status.className = type;
+            status.style.display = "block";
         }
     </script>
 </body>
