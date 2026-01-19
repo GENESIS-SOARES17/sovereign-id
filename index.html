@@ -102,4 +102,57 @@
                     conta = contas[0];
                     btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
                     btnConectar.style.backgroundColor = "#1e293b";
-                    btnConectar.style.border = "1px solid #
+                    btnConectar.style.border = "1px solid #4f46e5";
+                    
+                    areaMint.style.display = "block";
+                    status.innerText = "Carteira vinculada com sucesso!";
+                    status.className = "success";
+                } catch (e) {
+                    status.innerText = "Erro ao conectar. Tente novamente.";
+                    status.className = "error";
+                }
+            } else {
+                alert("Por favor, instale a MetaMask para usar este DApp!");
+            }
+        };
+
+        // Função para realizar o Mint
+        document.getElementById('btnMint').onclick = async () => {
+            const hashValue = inputHash.value.trim();
+            
+            // Validação básica do Hash (deve ter 66 caracteres incluindo 0x)
+            if (hashValue.length !== 66 || !hashValue.startsWith("0x")) {
+                status.innerText = "Erro: O Hash deve ter 66 caracteres (0x...).";
+                status.className = "error";
+                return;
+            }
+
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                const contrato = new ethers.Contract(enderecoContrato, abi, signer);
+                
+                status.innerText = "Aguardando confirmação na MetaMask...";
+                status.className = "";
+                
+                const tx = await contrato.mint(hashValue);
+                status.innerText = "Transação enviada! Processando na rede...";
+                
+                await tx.wait(); // Aguarda a confirmação do bloco
+                
+                status.innerText = "🎉 Sucesso! Identidade mintada na Neura!";
+                status.className = "success";
+                document.getElementById('btnMint').disabled = true;
+            } catch (e) {
+                console.error(e);
+                if (e.message.includes("user rejected")) {
+                    status.innerText = "Transação cancelada pelo usuário.";
+                } else {
+                    status.innerText = "Erro na transação. Verifique seu saldo ou se já possui um ID.";
+                }
+                status.className = "error";
+            }
+        };
+    </script>
+</body>
+</html>
