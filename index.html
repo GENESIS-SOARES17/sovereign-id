@@ -22,7 +22,7 @@
             border-radius: 20px; 
             text-align: center; 
             width: 90%;
-            max-width: 400px; 
+            max-width: 420px; 
             border: 1px solid #334155;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
@@ -39,8 +39,11 @@
             width: 100%; 
             font-weight: 600;
             transition: all 0.3s ease;
+            margin-top: 10px;
         }
         .btn:hover { background-color: #4338ca; }
+        .btn-cert { background-color: #059669; margin-top: 15px; }
+        .btn-cert:hover { background-color: #047857; }
         .btn:disabled { background-color: #334155; cursor: not-allowed; }
 
         input { 
@@ -53,6 +56,7 @@
             color: #4ade80; 
             box-sizing: border-box;
             text-align: center;
+            font-family: monospace;
         }
         
         #status { margin-top: 20px; font-size: 0.85rem; }
@@ -78,16 +82,18 @@
         <button id="btnConectar" class="btn">Conectar MetaMask</button>
         
         <div id="areaMint" style="display:none;">
-            <input type="text" id="inputHash" placeholder="0x... (Hash de 66 caracteres)">
+            <input type="text" id="inputHash" placeholder="0x... (Hash da Identidade)">
             <button id="btnMint" class="btn">Mintar Minha Identidade</button>
         </div>
 
-        <div id="status">Aguardando conexão...</div>
+        <div id="status">Aguardando conexão com a carteira...</div>
         <a id="linkExplorador" href="#" target="_blank" style="display:none;">Ver transação no Explorador ↗</a>
+        <button id="btnDownload" class="btn btn-cert" style="display:none;">📄 Baixar Certificado Digital</button>
     </div>
 
     <script>
         let conta;
+        let transacaoFinal;
         const enderecoContrato = "0x78593BF01f2A538Bcb72C8F0D37e0cd99d161497"; 
         const abi = ["function mint(bytes32 _identityHash) external"];
 
@@ -97,6 +103,7 @@
         const inputHash = document.getElementById('inputHash');
         const btnMint = document.getElementById('btnMint');
         const linkExplorador = document.getElementById('linkExplorador');
+        const btnDownload = document.getElementById('btnDownload');
 
         btnConectar.onclick = async () => {
             if (window.ethereum) {
@@ -105,21 +112,21 @@
                     conta = contas[0];
                     btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
                     areaMint.style.display = "block";
-                    status.innerText = "Carteira vinculada!";
+                    status.innerText = "Carteira vinculada com sucesso!";
                     status.className = "success";
                 } catch (err) {
                     status.innerText = "Conexão recusada.";
                     status.className = "error";
                 }
             } else {
-                alert("Instale a MetaMask!");
+                alert("Instale a MetaMask para interagir!");
             }
         };
 
         btnMint.onclick = async () => {
-            const hash = inputHash.value.trim();
-            if (hash.length !== 66 || !hash.startsWith("0x")) {
-                status.innerText = "Erro: Hash inválido.";
+            const hashValue = inputHash.value.trim();
+            if (hashValue.length !== 66 || !hashValue.startsWith("0x")) {
+                status.innerText = "Erro: Hash deve ter 66 caracteres.";
                 status.className = "error";
                 return;
             }
@@ -129,13 +136,13 @@
                 const signer = provider.getSigner();
                 const contrato = new ethers.Contract(enderecoContrato, abi, signer);
                 
-                status.innerText = "Assine na MetaMask...";
+                status.innerText = "Aguardando assinatura...";
                 status.className = "loading";
                 
-                const tx = await contrato.mint(hash);
-                status.innerText = "Processando na Blockchain...";
+                const tx = await contrato.mint(hashValue);
+                transacaoFinal = tx.hash;
+                status.innerText = "Processando na Neura Network...";
                 
-                // Mostrar o link assim que a transação é enviada
                 linkExplorador.href = `https://explorer.neura.network/tx/${tx.hash}`;
                 linkExplorador.style.display = "block";
                 
@@ -144,11 +151,37 @@
                 status.innerText = "🎉 Sucesso! Identidade Registrada.";
                 status.className = "success";
                 btnMint.disabled = true;
+                btnDownload.style.display = "block";
             } catch (err) {
                 status.innerText = "Erro: Já possui ID ou saldo insuficiente.";
                 status.className = "error";
-                console.error(err);
             }
+        };
+
+        // Função para gerar o arquivo do certificado
+        btnDownload.onclick = () => {
+            const data = new Date().toLocaleString();
+            const conteudo = `
+=========================================
+        CERTIFICADO SOVEREIGN ID
+=========================================
+Status: REGISTRADO ON-CHAIN
+Data do Registro: ${data}
+Rede: Neura Testnet
+Contrato: ${enderecoContrato}
+Carteira Titular: ${conta}
+Hash da Identidade: ${inputHash.value}
+Hash da Transação: ${transacaoFinal}
+=========================================
+Verifique em: https://explorer.neura.network
+=========================================
+            `;
+            const blob = new Blob([conteudo], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SovereignID_Certificado.txt`;
+            a.click();
         };
     </script>
 </body>
