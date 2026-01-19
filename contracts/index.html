@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SovereignID - DApp</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f9; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        button { background-color: #6200ee; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        button:disabled { background-color: #ccc; }
+        input { padding: 10px; width: 80%; margin-top: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>🆔 SovereignID</h1>
+        <p>Sua Identidade Soulbound Descentralizada</p>
+        
+        <button id="connectBtn">Conectar Carteira</button>
+        
+        <div id="mintSection" style="display:none;">
+            <hr>
+            <input type="text" id="hashInput" placeholder="Insira o Hash da Identidade (bytes32)">
+            <button id="mintBtn">Mintar Meu ID</button>
+        </div>
+
+        <p id="status"></p>
+    </div>
+
+    <script>
+        let signer;
+        let contract;
+        const contractAddress = "ENDERECO_DO_SEU_CONTRATO_APOS_DEPLOY";
+        const abi = [
+            "function mint(bytes32 _identityHash) external",
+            "function hasSovereignId(address user) external view returns (bool)"
+        ];
+
+        const connectBtn = document.getElementById('connectBtn');
+        const mintSection = document.getElementById('mintSection');
+        const status = document.getElementById('status');
+
+        connectBtn.onclick = async () => {
+            if (window.ethereum) {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                const address = await signer.getAddress();
+                
+                connectBtn.innerText = "Conectado: " + address.substring(0,6) + "...";
+                mintSection.style.display = "block";
+                status.innerText = "Carteira conectada com sucesso!";
+            } else {
+                alert("Por favor, instale a MetaMask!");
+            }
+        };
+
+        document.getElementById('mintBtn').onclick = async () => {
+            const hash = document.getElementById('hashInput').value;
+            if (hash.length !== 66) {
+                alert("O hash deve ter 66 caracteres (incluindo 0x)");
+                return;
+            }
+
+            try {
+                contract = new ethers.Contract(contractAddress, abi, signer);
+                status.innerText = "Enviando transação...";
+                const tx = await contract.mint(hash);
+                await tx.wait();
+                status.innerText = "ID Mintado com sucesso! 🎉";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Erro ao mintar. Verifique o console.";
+            }
+        };
+    </script>
+</body>
+</html>
