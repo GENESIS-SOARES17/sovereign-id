@@ -3,144 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SovereignID - DApp Neura</title>
+    <title>SovereignID - Neura</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
-        /* Estilização Sólida para evitar erros de variáveis não definidas */
         body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
+            font-family: sans-serif; 
             display: flex; 
-            flex-direction: column; 
             align-items: center; 
             justify-content: center; 
             min-height: 100vh; 
             background-color: #0f172a; 
-            color: #ffffff;
+            color: white; 
             margin: 0;
         }
         .card { 
             background: #1e293b; 
-            padding: 2.5rem; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            padding: 30px; 
+            border-radius: 15px; 
             text-align: center; 
-            max-width: 400px;
-            width: 90%;
+            width: 350px; 
             border: 1px solid #334155;
         }
-        h1 { color: #818cf8; margin-bottom: 0.5rem; font-size: 1.8rem; }
-        p { color: #94a3b8; margin-bottom: 2rem; font-size: 0.95rem; }
-        
-        /* Botões com cores fixas para garantir visibilidade */
         button { 
             background-color: #4f46e5; 
-            color: #ffffff; 
+            color: white; 
             border: none; 
-            padding: 14px 20px; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-weight: 600;
-            width: 100%;
-            transition: all 0.2s ease;
-            font-size: 1rem;
-        }
-        button:hover { background-color: #4338ca; transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
-        button:disabled { background-color: #334155; cursor: not-allowed; opacity: 0.7; }
-
-        input { 
-            padding: 12px; 
-            width: 100%; 
-            margin-bottom: 15px;
-            border: 1px solid #334155; 
+            padding: 15px; 
             border-radius: 8px; 
-            background: #0f172a;
-            color: #ffffff;
+            cursor: pointer; 
+            width: 100%; 
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            border: 1px solid #334155; 
+            background: #0f172a; 
+            color: white; 
             box-sizing: border-box;
-            font-family: monospace;
         }
-
-        #status { 
-            margin-top: 1.5rem; 
-            font-size: 0.85rem; 
-            padding: 12px;
-            border-radius: 8px;
-            display: none; /* Escondido até ter uma mensagem */
-        }
-        .success { display: block !important; color: #4ade80; background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.2); }
-        .error { display: block !important; color: #f87171; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.2); }
+        #status { margin-top: 15px; font-size: 0.8rem; color: #94a3b8; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>🆔 SovereignID</h1>
-        <p>Identidade Soulbound na Rede Neura</p>
+        <h2>🆔 SovereignID</h2>
+        <p>Neura Testnet</p>
         
-        <button id="connectBtn">Conectar Carteira MetaMask</button>
+        <button id="btnConectar">Conectar MetaMask</button>
         
-        <div id="mintSection" style="display:none; margin-top: 20px;">
-            <input type="text" id="hashInput" placeholder="Hash da Identidade (0x...)">
-            <button id="mintBtn">Mintar Minha Identidade</button>
+        <div id="areaMint" style="display:none;">
+            <input type="text" id="inputHash" placeholder="Hash 0x...">
+            <button id="btnMint">Mintar Identidade</button>
         </div>
 
-        <div id="status"></div>
+        <div id="status">Aguardando conexão...</div>
     </div>
 
     <script>
-        let signer;
-        let contract;
-        
-        // Endereço do seu contrato implantado na Neura
-        const contractAddress = "0x17D7338880AD6926D00C9f482A10049395C0C1b2";
-        
-        const abi = [
-            "function mint(bytes32 _identityHash) external",
-            "function hasSovereignId(address user) external view returns (bool)"
-        ];
+        let conta;
+        let contrato;
+        const enderecoContrato = "0x17D7338880AD6926D00C9f482A10049395C0C1b2";
+        const abi = ["function mint(bytes32 _hash) external"];
 
-        const connectBtn = document.getElementById('connectBtn');
-        const mintSection = document.getElementById('mintSection');
-        const statusDiv = document.getElementById('status');
+        const btnConectar = document.getElementById('btnConectar');
+        const areaMint = document.getElementById('areaMint');
+        const status = document.getElementById('status');
 
-        // Função para conectar carteira com tratamento de erro aprimorado
-        connectBtn.onclick = async () => {
-            if (typeof window.ethereum !== 'undefined') {
+        btnConectar.onclick = async () => {
+            if (window.ethereum) {
                 try {
-                    // Solicita as contas ao usuário
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const provider = new ethers.providers.Web3Provider(window.ethereum);
-                    
-                    // Verifica se está na rede correta (Neura ID: 267 ou similar)
-                    const network = await provider.getNetwork();
-                    console.log("Conectado na rede:", network.chainId);
-
-                    signer = provider.getSigner();
-                    const address = accounts[0];
-                    
-                    connectBtn.innerText = "Conectado: " + address.substring(0,6) + "..." + address.substring(38);
-                    connectBtn.style.backgroundColor = "#1e293b";
-                    connectBtn.style.border = "1px solid #4f46e5";
-                    
-                    mintSection.style.display = "block";
-                    showStatus("Sucesso: Carteira vinculada!", "success");
-                } catch (err) {
-                    console.error("Erro de conexão:", err);
-                    showStatus("Erro: Falha ao conectar. Tente novamente.", "error");
+                    const contas = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    conta = contas[0];
+                    btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
+                    areaMint.style.display = "block";
+                    status.innerText = "Carteira conectada!";
+                } catch (e) {
+                    status.innerText = "Erro ao conectar.";
                 }
             } else {
-                showStatus("Erro: MetaMask não detectada.", "error");
+                alert("Instale a MetaMask!");
             }
         };
 
-        // Função para Mintar
-        document.getElementById('mintBtn').onclick = async () => {
-            const hash = document.getElementById('hashInput').value;
-            
-            if (!hash.startsWith("0x") || hash.length !== 66) {
-                showStatus("Erro: Hash inválido (deve ter 66 caracteres).", "error");
+        document.getElementById('btnMint').onclick = async () => {
+            const hash = document.getElementById('inputHash').value;
+            if (hash.length !== 66) {
+                alert("Hash inválido!");
                 return;
             }
-
             try {
-                contract = new
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                contrato = new ethers.Contract(enderecoContrato, abi, signer);
+                
+                status.innerText = "Confirmando na MetaMask...";
+                const tx = await contrato.mint(hash);
+                status.innerText = "Enviado! Aguarde...";
+                await tx.wait();
+                status.innerText = "🎉 Mintado com sucesso!";
+            } catch (e) {
+                status.innerText = "Erro na transação.";
+            }
+        };
+    </script>
+</body>
+</html>
