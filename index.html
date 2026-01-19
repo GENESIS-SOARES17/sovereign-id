@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SovereignID - Neura</title>
+    <title>SovereignID - Neura Network</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
         body { 
@@ -18,98 +18,88 @@
         }
         .card { 
             background: #1e293b; 
-            padding: 30px; 
-            border-radius: 15px; 
+            padding: 40px; 
+            border-radius: 20px; 
             text-align: center; 
-            width: 350px; 
+            width: 380px; 
             border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
+        h2 { color: #818cf8; margin-bottom: 10px; }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 30px; }
+        
         button { 
             background-color: #4f46e5; 
             color: white; 
             border: none; 
             padding: 15px; 
-            border-radius: 8px; 
+            border-radius: 10px; 
             cursor: pointer; 
             width: 100%; 
             font-weight: bold;
-            margin-top: 10px;
+            font-size: 1rem;
+            transition: background 0.3s;
         }
+        button:hover { background-color: #4338ca; }
+        button:disabled { background-color: #334155; cursor: not-allowed; }
+
         input { 
             width: 100%; 
-            padding: 10px; 
-            margin: 10px 0; 
-            border-radius: 5px; 
+            padding: 12px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
             border: 1px solid #334155; 
             background: #0f172a; 
             color: white; 
             box-sizing: border-box;
+            font-family: monospace;
         }
-        #status { margin-top: 15px; font-size: 0.8rem; color: #94a3b8; }
+        
+        #status { 
+            margin-top: 20px; 
+            font-size: 0.85rem; 
+            color: #818cf8;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { color: #4ade80 !important; }
+        .error { color: #f87171 !important; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h2>🆔 SovereignID</h2>
-        <p>Neura Testnet</p>
+        <p>Identidade Descentralizada na Neura Testnet</p>
         
-        <button id="btnConectar">Conectar MetaMask</button>
+        <button id="btnConectar">Conectar Carteira MetaMask</button>
         
-        <div id="areaMint" style="display:none;">
-            <input type="text" id="inputHash" placeholder="Hash 0x...">
-            <button id="btnMint">Mintar Identidade</button>
+        <div id="areaMint" style="display:none; margin-top: 20px;">
+            <input type="text" id="inputHash" placeholder="Cole o Hash aqui (0x...)">
+            <button id="btnMint">Mintar Minha Identidade</button>
         </div>
 
-        <div id="status">Aguardando conexão...</div>
+        <div id="status">Aguardando conexão com a carteira...</div>
     </div>
 
     <script>
         let conta;
-        let contrato;
-        const enderecoContrato = "0x17D7338880AD6926D00C9f482A10049395C0C1b2";
-        const abi = ["function mint(bytes32 _hash) external"];
+        // ENDEREÇO ATUALIZADO DO SEU CONTRATO QUE FOI CONFIRMADO NO EXPLORADOR
+        const enderecoContrato = "0x78593BF01f2A538Bcb72C8F0D37e0cd99d161497"; 
+        
+        const abi = ["function mint(bytes32 _identityHash) external"];
 
         const btnConectar = document.getElementById('btnConectar');
         const areaMint = document.getElementById('areaMint');
         const status = document.getElementById('status');
+        const inputHash = document.getElementById('inputHash');
 
+        // Função para conectar a MetaMask
         btnConectar.onclick = async () => {
             if (window.ethereum) {
                 try {
                     const contas = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     conta = contas[0];
                     btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
-                    areaMint.style.display = "block";
-                    status.innerText = "Carteira conectada!";
-                } catch (e) {
-                    status.innerText = "Erro ao conectar.";
-                }
-            } else {
-                alert("Instale a MetaMask!");
-            }
-        };
-
-        document.getElementById('btnMint').onclick = async () => {
-            const hash = document.getElementById('inputHash').value;
-            if (hash.length !== 66) {
-                alert("Hash inválido!");
-                return;
-            }
-            try {
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const signer = provider.getSigner();
-                contrato = new ethers.Contract(enderecoContrato, abi, signer);
-                
-                status.innerText = "Confirmando na MetaMask...";
-                const tx = await contrato.mint(hash);
-                status.innerText = "Enviado! Aguarde...";
-                await tx.wait();
-                status.innerText = "🎉 Mintado com sucesso!";
-            } catch (e) {
-                status.innerText = "Erro na transação.";
-            }
-        };
-    </script>
-</body>
-</html>
+                    btnConectar.style.backgroundColor = "#1e293b";
+                    btnConectar.style.border = "1px solid #
