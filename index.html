@@ -7,7 +7,7 @@
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -38,12 +38,10 @@
             cursor: pointer; 
             width: 100%; 
             font-weight: 600;
-            font-size: 1rem;
             transition: all 0.3s ease;
-            margin-bottom: 10px;
         }
-        .btn:hover { background-color: #4338ca; transform: translateY(-1px); }
-        .btn:disabled { background-color: #334155; cursor: not-allowed; transform: none; }
+        .btn:hover { background-color: #4338ca; }
+        .btn:disabled { background-color: #334155; cursor: not-allowed; }
 
         input { 
             width: 100%; 
@@ -54,18 +52,21 @@
             background: #0f172a; 
             color: #4ade80; 
             box-sizing: border-box;
-            font-family: 'Courier New', Courier, monospace;
             text-align: center;
         }
         
-        #status { 
-            margin-top: 20px; 
-            font-size: 0.85rem; 
-            min-height: 20px;
-        }
-        .success { color: #4ade80; font-weight: bold; }
-        .error { color: #f87171; font-weight: bold; }
+        #status { margin-top: 20px; font-size: 0.85rem; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
         .loading { color: #fbbf24; }
+        
+        #linkExplorador {
+            display: block;
+            margin-top: 15px;
+            color: #818cf8;
+            text-decoration: underline;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -82,11 +83,11 @@
         </div>
 
         <div id="status">Aguardando conexão...</div>
+        <a id="linkExplorador" href="#" target="_blank" style="display:none;">Ver transação no Explorador ↗</a>
     </div>
 
     <script>
         let conta;
-        // Endereço verificado no explorador da Neura
         const enderecoContrato = "0x78593BF01f2A538Bcb72C8F0D37e0cd99d161497"; 
         const abi = ["function mint(bytes32 _identityHash) external"];
 
@@ -95,36 +96,30 @@
         const status = document.getElementById('status');
         const inputHash = document.getElementById('inputHash');
         const btnMint = document.getElementById('btnMint');
+        const linkExplorador = document.getElementById('linkExplorador');
 
-        // Conectar Carteira
         btnConectar.onclick = async () => {
-            if (typeof window.ethereum !== 'undefined') {
+            if (window.ethereum) {
                 try {
                     const contas = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     conta = contas[0];
-                    btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "..." + conta.substring(38);
-                    btnConectar.style.background = "#0f172a";
-                    btnConectar.style.border = "1px solid #4f46e5";
-                    
+                    btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
                     areaMint.style.display = "block";
-                    status.innerText = "Carteira conectada! Insira um Hash válido.";
+                    status.innerText = "Carteira vinculada!";
                     status.className = "success";
                 } catch (err) {
                     status.innerText = "Conexão recusada.";
                     status.className = "error";
                 }
             } else {
-                status.innerText = "Instale a MetaMask!";
-                status.className = "error";
+                alert("Instale a MetaMask!");
             }
         };
 
-        // Realizar Mint
         btnMint.onclick = async () => {
             const hash = inputHash.value.trim();
-            
             if (hash.length !== 66 || !hash.startsWith("0x")) {
-                status.innerText = "Erro: O Hash deve ter 66 caracteres.";
+                status.innerText = "Erro: Hash inválido.";
                 status.className = "error";
                 return;
             }
@@ -134,26 +129,25 @@
                 const signer = provider.getSigner();
                 const contrato = new ethers.Contract(enderecoContrato, abi, signer);
                 
-                status.innerText = "Solicitando assinatura...";
+                status.innerText = "Assine na MetaMask...";
                 status.className = "loading";
                 
                 const tx = await contrato.mint(hash);
-                status.innerText = "Transação enviada! Aguardando rede...";
+                status.innerText = "Processando na Blockchain...";
                 
-                await tx.wait(); // Espera a confirmação no bloco
+                // Mostrar o link assim que a transação é enviada
+                linkExplorador.href = `https://explorer.neura.network/tx/${tx.hash}`;
+                linkExplorador.style.display = "block";
                 
-                status.innerText = "🎉 Sucesso! Identidade registrada na Neura.";
+                await tx.wait(); 
+                
+                status.innerText = "🎉 Sucesso! Identidade Registrada.";
                 status.className = "success";
                 btnMint.disabled = true;
-                inputHash.disabled = true;
             } catch (err) {
-                console.error(err);
-                if (err.message.includes("user rejected")) {
-                    status.innerText = "Transação cancelada.";
-                } else {
-                    status.innerText = "Erro: Verifique saldo ou se já possui ID.";
-                }
+                status.innerText = "Erro: Já possui ID ou saldo insuficiente.";
                 status.className = "error";
+                console.error(err);
             }
         };
     </script>
