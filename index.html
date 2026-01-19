@@ -67,7 +67,6 @@
     </style>
 </head>
 <body>
-
     <div class="card">
         <h2>🆔 SovereignID</h2>
         <p>Identidade Descentralizada na Neura Testnet</p>
@@ -84,7 +83,7 @@
 
     <script>
         let conta;
-        // ENDEREÇO ATUALIZADO DO SEU CONTRATO QUE FOI CONFIRMADO NO EXPLORADOR
+        // ENDEREÇO DO SEU CONTRATO QUE FOI CRIADO COM SUCESSO
         const enderecoContrato = "0x78593BF01f2A538Bcb72C8F0D37e0cd99d161497"; 
         
         const abi = ["function mint(bytes32 _identityHash) external"];
@@ -94,35 +93,28 @@
         const status = document.getElementById('status');
         const inputHash = document.getElementById('inputHash');
 
-        // Função para conectar a MetaMask
         btnConectar.onclick = async () => {
             if (window.ethereum) {
                 try {
                     const contas = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     conta = contas[0];
                     btnConectar.innerText = "Conectado: " + conta.substring(0,6) + "...";
-                    btnConectar.style.backgroundColor = "#1e293b";
-                    btnConectar.style.border = "1px solid #4f46e5";
-                    
                     areaMint.style.display = "block";
-                    status.innerText = "Carteira vinculada com sucesso!";
+                    status.innerText = "Carteira vinculada!";
                     status.className = "success";
                 } catch (e) {
-                    status.innerText = "Erro ao conectar. Tente novamente.";
+                    status.innerText = "Erro ao conectar.";
                     status.className = "error";
                 }
             } else {
-                alert("Por favor, instale a MetaMask para usar este DApp!");
+                alert("Instale a MetaMask!");
             }
         };
 
-        // Função para realizar o Mint
         document.getElementById('btnMint').onclick = async () => {
             const hashValue = inputHash.value.trim();
-            
-            // Validação básica do Hash (deve ter 66 caracteres incluindo 0x)
             if (hashValue.length !== 66 || !hashValue.startsWith("0x")) {
-                status.innerText = "Erro: O Hash deve ter 66 caracteres (0x...).";
+                status.innerText = "Erro: Hash deve ter 66 caracteres.";
                 status.className = "error";
                 return;
             }
@@ -132,24 +124,17 @@
                 const signer = provider.getSigner();
                 const contrato = new ethers.Contract(enderecoContrato, abi, signer);
                 
-                status.innerText = "Aguardando confirmação na MetaMask...";
-                status.className = "";
-                
+                status.innerText = "Confirmando na MetaMask...";
                 const tx = await contrato.mint(hashValue);
-                status.innerText = "Transação enviada! Processando na rede...";
+                status.innerText = "Processando transação...";
                 
-                await tx.wait(); // Aguarda a confirmação do bloco
+                await tx.wait(); 
                 
-                status.innerText = "🎉 Sucesso! Identidade mintada na Neura!";
+                status.innerText = "🎉 Sucesso! Identidade mintada!";
                 status.className = "success";
                 document.getElementById('btnMint').disabled = true;
             } catch (e) {
-                console.error(e);
-                if (e.message.includes("user rejected")) {
-                    status.innerText = "Transação cancelada pelo usuário.";
-                } else {
-                    status.innerText = "Erro na transação. Verifique seu saldo ou se já possui um ID.";
-                }
+                status.innerText = "Erro: Verifique saldo ou se já possui ID.";
                 status.className = "error";
             }
         };
