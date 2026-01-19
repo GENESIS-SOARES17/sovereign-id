@@ -3,79 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SovereignID - DApp</title>
+    <title>SovereignID - DApp Neura</title>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f9; }
-        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        button { background-color: #6200ee; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
-        button:disabled { background-color: #ccc; }
-        input { padding: 10px; width: 80%; margin-top: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            background-color: #0f172a; 
+            color: white;
+            margin: 0;
+        }
+        .card { 
+            background: #1e293b; 
+            padding: 2.5rem; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            text-align: center; 
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid #334155;
+        }
+        h1 { color: #818cf8; margin-bottom: 0.5rem; }
+        p { color: #94a3b8; font-size: 0.9rem; }
+        button { 
+            background-color: #4f46e5; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 15px;
+        }
+        button:hover { background-color: #4338ca; }
+        button:disabled { background-color: #334155; cursor: not-allowed; }
+        input { 
+            padding: 12px; 
+            width: 100%; 
+            margin-top: 20px; 
+            border: 1px solid #334155; 
+            border-radius: 8px; 
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+        #status { 
+            margin-top: 20px; 
+            font-size: 0.85rem; 
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+        .error { color: #f87171; background: rgba(248, 113, 113, 0.1); }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>🆔 SovereignID</h1>
-        <p>Sua Identidade Soulbound Descentralizada</p>
+        <p>Identidade Soulbound na Rede Neura</p>
         
-        <button id="connectBtn">Conectar Carteira</button>
+        <button id="connectBtn">Conectar Carteira MetaMask</button>
         
         <div id="mintSection" style="display:none;">
-            <hr>
-            <input type="text" id="hashInput" placeholder="Insira o Hash da Identidade (bytes32)">
-            <button id="mintBtn">Mintar Meu ID</button>
+            <input type="text" id="hashInput" placeholder="Hash da Identidade (ex: 0x123...)">
+            <button id="mintBtn">Mintar Minha Identidade</button>
         </div>
 
-        <p id="status"></p>
+        <div id="status"></div>
     </div>
 
     <script>
         let signer;
         let contract;
-        const contractAddress = "ENDERECO_DO_SEU_CONTRATO_APOS_DEPLOY";
+        
+        // ENDEREÇO DO SEU CONTRATO QUE VOCÊ PASSOU
+        const contractAddress = "0x3E5d5E0c4b88a9E2d43B7F803cA010C0f0bA9281";
+        
+        // ABI simplificada para as funções que vamos usar
         const abi = [
             "function mint(bytes32 _identityHash) external",
-            "function hasSovereignId(address user) external view returns (bool)"
+            "function hasSovereignId(address user) external view returns (bool)",
+            "function reputation(address user) external view returns (uint256)"
         ];
 
         const connectBtn = document.getElementById('connectBtn');
         const mintSection = document.getElementById('mintSection');
         const status = document.getElementById('status');
 
+        // Função para conectar a carteira
         connectBtn.onclick = async () => {
             if (window.ethereum) {
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                signer = provider.getSigner();
-                const address = await signer.getAddress();
-                
-                connectBtn.innerText = "Conectado: " + address.substring(0,6) + "...";
-                mintSection.style.display = "block";
-                status.innerText = "Carteira conectada com sucesso!";
+                try {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    
+                    connectBtn.innerText = "Conectado: " + address.substring(0,6) + "..." + address.substring(38);
+                    mintSection.style.display = "block";
+                    showStatus("Carteira conectada! Agora você pode mintar seu ID.", "success");
+                } catch (err) {
+                    showStatus("Erro ao conectar carteira.", "error");
+                }
             } else {
-                alert("Por favor, instale a MetaMask!");
+                alert("MetaMask não encontrada. Por favor, instale a extensão.");
             }
         };
 
+        // Função para chamar o Mint no contrato
         document.getElementById('mintBtn').onclick = async () => {
             const hash = document.getElementById('hashInput').value;
-            if (hash.length !== 66) {
-                alert("O hash deve ter 66 caracteres (incluindo 0x)");
+            
+            if (!hash.startsWith("0x") || hash.length !== 66) {
+                showStatus("Erro: O hash deve começar com 0x e ter 66 caracteres.", "error");
                 return;
             }
 
             try {
                 contract = new ethers.Contract(contractAddress, abi, signer);
-                status.innerText = "Enviando transação...";
+                showStatus("Aguardando confirmação na MetaMask...", "success");
+                
                 const tx = await contract.mint(hash);
+                showStatus("Transação enviada! Aguardando blocos...", "success");
+                
                 await tx.wait();
-                status.innerText = "ID Mintado com sucesso! 🎉";
+                showStatus("🎉 Identidade Soulbound mintada com sucesso!", "success");
+                document.getElementById('mintBtn').disabled = true;
             } catch (err) {
                 console.error(err);
-                status.innerText = "Erro ao mintar. Verifique o console.";
+                if (err.message.includes("IdentityAlreadyExists")) {
+                    showStatus("Erro: Esta carteira já possui um SovereignID.", "error");
+                } else {
+                    showStatus("Erro na transação. Verifique seu saldo de teste.", "error");
+                }
             }
         };
+
+        function showStatus(msg, type) {
+            status.innerText = msg;
+            status.className = type;
+        }
     </script>
 </body>
 </html>
